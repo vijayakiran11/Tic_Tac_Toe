@@ -69,10 +69,13 @@ NextTable:
 End Sub
 
 ******************
-Sub Paste_All_Charts_To_Outlook()
 
-    Dim ch As ChartObject
+
+
+Sub Paste_All_Charts_To_Outlook_BIG()
+
     Dim srcWs As Worksheet
+    Dim ch As ChartObject
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
@@ -80,53 +83,68 @@ Sub Paste_All_Charts_To_Outlook()
     Dim insertRange As Object
     Dim chartCount As Long
     Dim shp As Object
+    Dim rowNum As Long, colNum As Long
+    Dim usableWidth As Double
 
-    Set srcWs = Worksheets("Charts") ' change if needed
+    ' ===== CHANGE SHEET NAME IF REQUIRED =====
+    Set srcWs = Worksheets("Charts")
+    ' ========================================
 
+    ' Start Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
-    olMail.BodyFormat = 2
+    olMail.BodyFormat = 2   ' HTML
     olMail.Display
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
+    ' Calculate usable email body width (POINTS)
+    usableWidth = wdDoc.PageSetup.PageWidth _
+                  - wdDoc.PageSetup.LeftMargin _
+                  - wdDoc.PageSetup.RightMargin
+
+    ' Insert table at end of email
     Set insertRange = wdDoc.Range
     insertRange.Collapse 0
 
     Set wdTable = wdDoc.Tables.Add(insertRange, 1, 2)
     wdTable.Borders.Enable = False
-
-    ' Make table full width
-    wdTable.PreferredWidthType = 2
-    wdTable.PreferredWidth = 100
-
-    ' Equal column widths
-    wdTable.Columns(1).PreferredWidthType = 2
-    wdTable.Columns(1).PreferredWidth = 50
-    wdTable.Columns(2).PreferredWidthType = 2
-    wdTable.Columns(2).PreferredWidth = 50
+    wdTable.AllowAutoFit = False
 
     chartCount = 0
 
+    ' ===== LOOP THROUGH ALL CHARTS =====
     For Each ch In srcWs.ChartObjects
 
         chartCount = chartCount + 1
-        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
 
-        wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.Paste
+        rowNum = (chartCount + 1) \ 2
+        colNum = IIf(chartCount Mod 2 = 1, 1, 2)
 
-        ' Resize pasted image to column width
-        Set shp = wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.InlineShapes(1)
+        ' Ensure enough rows
+        If rowNum > wdTable.Rows.Count Then
+            wdTable.Rows.Add
+        End If
+
+        ' Copy chart as HIGH-RES picture
+        ch.Chart.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
+
+        ' Paste into Outlook table cell
+        wdTable.Cell(rowNum, colNum).Range.Paste
+
+        ' Resize pasted image to HALF email width
+        Set shp = wdTable.Cell(rowNum, colNum).Range.InlineShapes(1)
         With shp
             .LockAspectRatio = True
-            .Width = wdTable.Columns(IIf(chartCount Mod 2 = 1, 1, 2)).Width - 10
+            .Width = (usableWidth / 2) - 20
         End With
 
-        If chartCount Mod 2 = 0 Then wdTable.Rows.Add
+        ' Center align
+        wdTable.Cell(rowNum, colNum).Range.ParagraphFormat.Alignment = 1
 
     Next ch
 
-    MsgBox "Charts resized to fill email width at 100% zoom.", vbInformation
+    MsgBox "All charts pasted BIG and readable in Outlook.", vbInformation
 
 End Sub
 
