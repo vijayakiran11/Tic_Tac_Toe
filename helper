@@ -67,3 +67,68 @@ NextTable:
     MsgBox "Done. All tables updated. Holidays excluded.", vbInformation
 
 End Sub
+
+
+
+
+
+Sub Copy_Charts_As_Pictures_No_Overlap()
+
+    Dim srcWs As Worksheet
+    Dim destWs As Worksheet
+    Dim ch As ChartObject
+    Dim pastedShape As Shape
+
+    ' 🔧 CHANGE THESE
+    Set srcWs = ActiveSheet              ' Source sheet
+    Set destWs = Worksheets("Sheet2")    ' Destination sheet
+
+    Const chartWidth As Double = 1077    ' 38 cm
+    Const chartHeight As Double = 482    ' 17 cm
+    Const gap As Double = 20             ' spacing between charts
+
+    Dim leftPos As Double
+    Dim topPos As Double
+    Dim chartCount As Long
+
+    leftPos = 10
+    topPos = 10
+    chartCount = 0
+
+    Application.ScreenUpdating = False
+
+    For Each ch In srcWs.ChartObjects
+
+        ' 🔒 Copy as picture (preserves colors & formatting)
+        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+
+        ' Paste as picture
+        destWs.Paste
+        Set pastedShape = destWs.Shapes(destWs.Shapes.Count)
+
+        ' Lock size
+        With pastedShape
+            .LockAspectRatio = msoFalse
+            .Width = chartWidth
+            .Height = chartHeight
+            .Left = leftPos
+            .Top = topPos
+        End With
+
+        chartCount = chartCount + 1
+
+        ' Position logic: 2 charts per row
+        If chartCount Mod 2 = 0 Then
+            leftPos = 10
+            topPos = topPos + chartHeight + gap
+        Else
+            leftPos = leftPos + chartWidth + gap
+        End If
+
+    Next ch
+
+    Application.ScreenUpdating = True
+
+    MsgBox "Charts pasted as pictures with exact formatting.", vbInformation
+
+End Sub
