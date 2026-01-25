@@ -67,69 +67,71 @@ NextTable:
     MsgBox "Done. All tables updated. Holidays excluded.", vbInformation
 
 End Sub
-
-
-
-Sub Copy_Charts_As_Pictures_No_Overlap()
+Sub Paste_Charts_To_Outlook_Body_No_Overlap()
 
     Dim srcWs As Worksheet
-    Dim destWs As Worksheet
     Dim ch As ChartObject
-    Dim pastedShape As Shape
+
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim wdDoc As Object
+    Dim wdTable As Object
+
+    Dim chartCount As Long
+    Dim rowIndex As Long
 
     Set srcWs = ActiveSheet
-    Set destWs = Worksheets("Sheet2")
 
-    Const gap As Double = 20   ' spacing between charts
+    ' Open Outlook
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0)
+    olMail.Display   ' MUST display to access WordEditor
 
-    Dim leftPos As Double
-    Dim topPos As Double
-    Dim chartCount As Long
-    Dim chartW As Double
-    Dim chartH As Double
+    Set wdDoc = olMail.GetInspector.WordEditor
 
-    leftPos = 10
-    topPos = 10
     chartCount = 0
+    rowIndex = 1
 
-    Application.ScreenUpdating = False
+    ' Create a table with 2 columns, start with 1 row
+    Set wdTable = wdDoc.Tables.Add( _
+        Range:=wdDoc.Range(0, 0), _
+        NumRows:=1, _
+        NumColumns:=2)
+
+    ' Formatting the table (IMPORTANT)
+    wdTable.AllowAutoFit = True
+    wdTable.Rows.Alignment = 1 ' Center
+    wdTable.Borders.Enable = False
 
     For Each ch In srcWs.ChartObjects
 
-        ' Capture EXACT size from source chart
-        chartW = ch.Width
-        chartH = ch.Height
-
-        ' Copy as picture (preserves formatting)
-        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
-
-        ' Paste
-        destWs.Paste
-        Set pastedShape = destWs.Shapes(destWs.Shapes.Count)
-
-        ' Apply EXACT same size & position
-        With pastedShape
-            .LockAspectRatio = msoFalse
-            .Width = chartW
-            .Height = chartH
-            .Left = leftPos
-            .Top = topPos
-        End With
-
         chartCount = chartCount + 1
 
-        ' Layout: 2 charts per row
-        If chartCount Mod 2 = 0 Then
-            leftPos = 10
-            topPos = topPos + chartH + gap
+        ' Copy chart as picture (preserves colours)
+        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+
+        ' Determine column (1 or 2)
+        Dim colIndex As Long
+        If chartCount Mod 2 = 1 Then
+            colIndex = 1
         Else
-            leftPos = leftPos + chartW + gap
+            colIndex = 2
+        End If
+
+        ' Paste into table cell
+        wdTable.Cell(rowIndex, colIndex).Range.Paste
+
+        ' Center align inside cell
+        wdTable.Cell(rowIndex, colIndex).Range.ParagraphFormat.Alignment = 1
+
+        ' After filling 2 columns, add new row
+        If colIndex = 2 Then
+            wdTable.Rows.Add
+            rowIndex = rowIndex + 1
         End If
 
     Next ch
 
-    Application.ScreenUpdating = True
-
-    MsgBox "Charts pasted with EXACT original size and formatting.", vbInformation
+    MsgBox "Charts pasted into Outlook email body with perfect alignment.", vbInformation
 
 End Sub
