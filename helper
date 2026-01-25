@@ -135,6 +135,7 @@ End Sub
 *******************
 Sub Paste_All_Charts_To_Outlook()
 
+    Dim srcWs As Worksheet
     Dim ch As ChartObject
     Dim olApp As Object
     Dim olMail As Object
@@ -142,8 +143,14 @@ Sub Paste_All_Charts_To_Outlook()
     Dim wdTable As Object
     Dim insertRange As Object
     Dim chartCount As Long
+    Dim shp As Object
+    Dim rowNum As Long, colNum As Long
 
-    ' Start Outlook
+    ' ===== CHANGE SHEET NAME IF NEEDED =====
+    Set srcWs = Worksheets("Charts")
+    ' =====================================
+
+    ' Open Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
     olMail.BodyFormat = 2   ' HTML
@@ -151,30 +158,58 @@ Sub Paste_All_Charts_To_Outlook()
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
-    ' Insert table at end of email
+    ' Insert table at end of mail
     Set insertRange = wdDoc.Range
     insertRange.Collapse 0
 
     Set wdTable = wdDoc.Tables.Add(insertRange, 1, 2)
     wdTable.Borders.Enable = False
+    wdTable.AllowAutoFit = False
+
+    ' Make table full width
+    wdTable.PreferredWidthType = 2   ' percent
+    wdTable.PreferredWidth = 100
+
+    ' Two equal columns
+    wdTable.Columns(1).PreferredWidthType = 2
+    wdTable.Columns(1).PreferredWidth = 50
+    wdTable.Columns(2).PreferredWidthType = 2
+    wdTable.Columns(2).PreferredWidth = 50
 
     chartCount = 0
 
-    ' Paste ALL charts
-    For Each ch In ActiveSheet.ChartObjects
+    ' ===== LOOP THROUGH ALL CHARTS =====
+    For Each ch In srcWs.ChartObjects
 
         chartCount = chartCount + 1
 
-        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+        ' Determine row & column
+        rowNum = (chartCount + 1) \ 2
+        colNum = IIf(chartCount Mod 2 = 1, 1, 2)
 
-        wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.Paste
+        ' Add row when required
+        If rowNum > wdTable.Rows.Count Then
+            wdTable.Rows.Add
+        End If
 
-        ' Add row every 2 charts
-        If chartCount Mod 2 = 0 Then wdTable.Rows.Add
+        ' Copy chart as HIGH-RES picture
+        ch.Chart.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
+
+        ' Paste into table cell
+        wdTable.Cell(rowNum, colNum).Range.Paste
+
+        ' Resize pasted image to fill column width
+        Set shp = wdTable.Cell(rowNum, colNum).Range.InlineShapes(1)
+        With shp
+            .LockAspectRatio = True
+            .Width = wdTable.Columns(colNum).Width - 10
+        End With
+
+        ' Center align
+        wdTable.Cell(rowNum, colNum).Range.ParagraphFormat.Alignment = 1
 
     Next ch
 
-    MsgBox "ALL charts pasted into email body.", vbInformation
+    MsgBox "All charts pasted correctly into Outlook body.", vbInformation
 
 End Sub
-
