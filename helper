@@ -67,82 +67,68 @@ NextTable:
     MsgBox "Done. All tables updated. Holidays excluded.", vbInformation
 
 End Sub
-Sub Paste_Charts_To_Outlook_Body_No_Overlap()
 
-    Dim srcWs As Worksheet
+******************
+Sub Paste_All_Charts_To_Outlook()
+
     Dim ch As ChartObject
-
+    Dim srcWs As Worksheet
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
     Dim wdTable As Object
-
+    Dim insertRange As Object
     Dim chartCount As Long
-    Dim rowIndex As Long
+    Dim shp As Object
 
-    Set srcWs = ActiveSheet
+    Set srcWs = Worksheets("Charts") ' change if needed
 
-    ' Open Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
-    olMail.Display   ' MUST display to access WordEditor
+    olMail.BodyFormat = 2
+    olMail.Display
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
-    chartCount = 0
-    rowIndex = 1
+    Set insertRange = wdDoc.Range
+    insertRange.Collapse 0
 
-    ' Create a table with 2 columns, start with 1 row
-    Set wdTable = wdDoc.Tables.Add( _
-        Range:=wdDoc.Range(0, 0), _
-        NumRows:=1, _
-        NumColumns:=2)
-
-    ' Formatting the table (IMPORTANT)
-    wdTable.AllowAutoFit = True
-    wdTable.Rows.Alignment = 1 ' Center
+    Set wdTable = wdDoc.Tables.Add(insertRange, 1, 2)
     wdTable.Borders.Enable = False
+
+    ' Make table full width
+    wdTable.PreferredWidthType = 2
+    wdTable.PreferredWidth = 100
+
+    ' Equal column widths
+    wdTable.Columns(1).PreferredWidthType = 2
+    wdTable.Columns(1).PreferredWidth = 50
+    wdTable.Columns(2).PreferredWidthType = 2
+    wdTable.Columns(2).PreferredWidth = 50
+
+    chartCount = 0
 
     For Each ch In srcWs.ChartObjects
 
         chartCount = chartCount + 1
-
-        ' Copy chart as picture (preserves colours)
         ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
 
-        ' Determine column (1 or 2)
-        Dim colIndex As Long
-        If chartCount Mod 2 = 1 Then
-            colIndex = 1
-        Else
-            colIndex = 2
-        End If
+        wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.Paste
 
-        ' Paste into table cell
-        wdTable.Cell(rowIndex, colIndex).Range.Paste
+        ' Resize pasted image to column width
+        Set shp = wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.InlineShapes(1)
+        With shp
+            .LockAspectRatio = True
+            .Width = wdTable.Columns(IIf(chartCount Mod 2 = 1, 1, 2)).Width - 10
+        End With
 
-        ' Center align inside cell
-        wdTable.Cell(rowIndex, colIndex).Range.ParagraphFormat.Alignment = 1
-
-        ' After filling 2 columns, add new row
-        If colIndex = 2 Then
-            wdTable.Rows.Add
-            rowIndex = rowIndex + 1
-        End If
+        If chartCount Mod 2 = 0 Then wdTable.Rows.Add
 
     Next ch
 
-    MsgBox "Charts pasted into Outlook email body with perfect alignment.", vbInformation
+    MsgBox "Charts resized to fill email width at 100% zoom.", vbInformation
 
 End Sub
-
-
-
-
-
-
-
-
 
 
 
