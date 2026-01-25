@@ -135,3 +135,60 @@ Sub Paste_Charts_To_Outlook_Body_No_Overlap()
     MsgBox "Charts pasted into Outlook email body with perfect alignment.", vbInformation
 
 End Sub
+
+
+
+
+
+
+
+
+
+
+
+*******************
+Sub Paste_All_Charts_To_Outlook()
+
+    Dim ch As ChartObject
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim wdDoc As Object
+    Dim wdTable As Object
+    Dim insertRange As Object
+    Dim chartCount As Long
+
+    ' Start Outlook
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0)
+    olMail.BodyFormat = 2   ' HTML
+    olMail.Display
+
+    Set wdDoc = olMail.GetInspector.WordEditor
+
+    ' Insert table at end of email
+    Set insertRange = wdDoc.Range
+    insertRange.Collapse 0
+
+    Set wdTable = wdDoc.Tables.Add(insertRange, 1, 2)
+    wdTable.Borders.Enable = False
+
+    chartCount = 0
+
+    ' Paste ALL charts
+    For Each ch In ActiveSheet.ChartObjects
+
+        chartCount = chartCount + 1
+
+        ch.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+
+        wdTable.Cell((chartCount + 1) \ 2, IIf(chartCount Mod 2 = 1, 1, 2)).Range.Paste
+
+        ' Add row every 2 charts
+        If chartCount Mod 2 = 0 Then wdTable.Rows.Add
+
+    Next ch
+
+    MsgBox "ALL charts pasted into email body.", vbInformation
+
+End Sub
+
