@@ -69,28 +69,28 @@ NextTable:
 End Sub
 
 ******************
-Sub Paste_All_Charts_To_Outlook_SIMPLE()
+Sub Paste_Charts_To_Outlook_Floating_Aligned()
 
     Dim srcWs As Worksheet
     Dim ch As ChartObject
-    Dim olApp As Object
-    Dim olMail As Object
+    Dim olApp As Object, olMail As Object
     Dim wdDoc As Object
     Dim shp As Object
 
-    Dim chartCount As Long
-    Dim leftPos As Double, topPos As Double
     Dim usableWidth As Double
     Dim chartWidth As Double
     Dim chartHeight As Double
     Dim gap As Double
+    Dim leftPos As Double, topPos As Double
+    Dim count As Long
 
-    ' CHANGE SHEET NAME IF NEEDED
+    ' ===== CHANGE SHEET NAME IF NEEDED =====
     Set srcWs = Worksheets("Charts")
+    ' =====================================
 
     gap = 20
 
-    ' START OUTLOOK
+    ' Start Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
     olMail.BodyFormat = 2
@@ -98,37 +98,40 @@ Sub Paste_All_Charts_To_Outlook_SIMPLE()
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
-    ' EMAIL BODY WIDTH
+    ' Calculate usable email width
     usableWidth = wdDoc.PageSetup.PageWidth _
                   - wdDoc.PageSetup.LeftMargin _
                   - wdDoc.PageSetup.RightMargin
 
+    ' FIXED SIZE (KEY PART)
     chartWidth = (usableWidth / 2) - gap
-    chartHeight = chartWidth * 0.6   ' <<< FIXED HEIGHT (adjust if needed)
+    chartHeight = chartWidth * 0.6   ' adjust ratio if needed
 
     leftPos = wdDoc.PageSetup.LeftMargin
     topPos = wdDoc.PageSetup.TopMargin
-    chartCount = 0
+    count = 0
 
     For Each ch In srcWs.ChartObjects
 
-        chartCount = chartCount + 1
+        count = count + 1
 
-        ' COPY AS HIGH QUALITY IMAGE
+        ' Copy chart as high quality image
         ch.Chart.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
 
+        ' Paste at end of email
         wdDoc.Range(wdDoc.Content.End - 1).Paste
         Set shp = wdDoc.Shapes(wdDoc.Shapes.Count)
 
+        ' Make floating and force SAME size
         With shp
-            .WrapFormat.Type = 3        ' Floating
-            .LockAspectRatio = False    ' IMPORTANT
+            .WrapFormat.Type = 3        ' In front of text (floating)
+            .LockAspectRatio = False
             .Width = chartWidth
             .Height = chartHeight
         End With
 
-        ' POSITION: 2 PER ROW
-        If chartCount Mod 2 = 1 Then
+        ' Position: 2 per row
+        If count Mod 2 = 1 Then
             shp.Left = leftPos
             shp.Top = topPos
         Else
@@ -139,7 +142,7 @@ Sub Paste_All_Charts_To_Outlook_SIMPLE()
 
     Next ch
 
-    MsgBox "All charts pasted BIG and perfectly aligned.", vbInformation
+    MsgBox "Charts pasted BIG, aligned, and clean.", vbInformation
 
 End Sub
 
