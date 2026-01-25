@@ -69,9 +69,7 @@ NextTable:
 End Sub
 
 ******************
-
-
-Sub Paste_All_Charts_To_Outlook_FLOATING_BIG_ALIGNED()
+Sub Paste_All_Charts_To_Outlook_SIMPLE()
 
     Dim srcWs As Worksheet
     Dim ch As ChartObject
@@ -84,18 +82,15 @@ Sub Paste_All_Charts_To_Outlook_FLOATING_BIG_ALIGNED()
     Dim leftPos As Double, topPos As Double
     Dim usableWidth As Double
     Dim chartWidth As Double
+    Dim chartHeight As Double
     Dim gap As Double
 
-    Dim firstShapeInRow As Object
-    Dim maxRowHeight As Double
-
-    ' ===== CHANGE SHEET NAME IF NEEDED =====
+    ' CHANGE SHEET NAME IF NEEDED
     Set srcWs = Worksheets("Charts")
-    ' =====================================
 
     gap = 20
 
-    ' Start Outlook
+    ' START OUTLOOK
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
     olMail.BodyFormat = 2
@@ -103,12 +98,13 @@ Sub Paste_All_Charts_To_Outlook_FLOATING_BIG_ALIGNED()
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
-    ' Calculate usable email width
+    ' EMAIL BODY WIDTH
     usableWidth = wdDoc.PageSetup.PageWidth _
                   - wdDoc.PageSetup.LeftMargin _
                   - wdDoc.PageSetup.RightMargin
 
     chartWidth = (usableWidth / 2) - gap
+    chartHeight = chartWidth * 0.6   ' <<< FIXED HEIGHT (adjust if needed)
 
     leftPos = wdDoc.PageSetup.LeftMargin
     topPos = wdDoc.PageSetup.TopMargin
@@ -118,54 +114,34 @@ Sub Paste_All_Charts_To_Outlook_FLOATING_BIG_ALIGNED()
 
         chartCount = chartCount + 1
 
-        ' Copy as HIGH-RES picture
+        ' COPY AS HIGH QUALITY IMAGE
         ch.Chart.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
 
-        ' Paste
         wdDoc.Range(wdDoc.Content.End - 1).Paste
         Set shp = wdDoc.Shapes(wdDoc.Shapes.Count)
 
         With shp
-            .WrapFormat.Type = 3   ' wdWrapSquare (FLOATING)
-            .LockAspectRatio = True
+            .WrapFormat.Type = 3        ' Floating
+            .LockAspectRatio = False    ' IMPORTANT
             .Width = chartWidth
+            .Height = chartHeight
         End With
 
-        ' ---- FIRST CHART IN ROW ----
+        ' POSITION: 2 PER ROW
         If chartCount Mod 2 = 1 Then
-
             shp.Left = leftPos
             shp.Top = topPos
-
-            Set firstShapeInRow = shp
-            maxRowHeight = shp.Height
-
-        ' ---- SECOND CHART IN ROW ----
         Else
-
             shp.Left = leftPos + chartWidth + gap
             shp.Top = topPos
-
-            ' Find max height of the row
-            If shp.Height > maxRowHeight Then
-                maxRowHeight = shp.Height
-            End If
-
-            ' FORCE BOTH CHARTS TO SAME HEIGHT
-            firstShapeInRow.Height = maxRowHeight
-            shp.Height = maxRowHeight
-
-            ' Move to next row
-            topPos = topPos + maxRowHeight + gap
-
+            topPos = topPos + chartHeight + gap
         End If
 
     Next ch
 
-    MsgBox "Charts pasted BIG and perfectly aligned.", vbInformation
+    MsgBox "All charts pasted BIG and perfectly aligned.", vbInformation
 
 End Sub
-
 
 
 *******************
