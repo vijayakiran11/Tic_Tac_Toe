@@ -71,80 +71,98 @@ End Sub
 ******************
 
 
-
-Sub Paste_All_Charts_To_Outlook_BIG()
+Sub Paste_All_Charts_To_Outlook_FLOATING_BIG_ALIGNED()
 
     Dim srcWs As Worksheet
     Dim ch As ChartObject
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
-    Dim wdTable As Object
-    Dim insertRange As Object
-    Dim chartCount As Long
     Dim shp As Object
-    Dim rowNum As Long, colNum As Long
-    Dim usableWidth As Double
 
-    ' ===== CHANGE SHEET NAME IF REQUIRED =====
+    Dim chartCount As Long
+    Dim leftPos As Double, topPos As Double
+    Dim usableWidth As Double
+    Dim chartWidth As Double
+    Dim gap As Double
+
+    Dim firstShapeInRow As Object
+    Dim maxRowHeight As Double
+
+    ' ===== CHANGE SHEET NAME IF NEEDED =====
     Set srcWs = Worksheets("Charts")
-    ' ========================================
+    ' =====================================
+
+    gap = 20
 
     ' Start Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
-    olMail.BodyFormat = 2   ' HTML
+    olMail.BodyFormat = 2
     olMail.Display
 
     Set wdDoc = olMail.GetInspector.WordEditor
 
-    ' Calculate usable email body width (POINTS)
+    ' Calculate usable email width
     usableWidth = wdDoc.PageSetup.PageWidth _
                   - wdDoc.PageSetup.LeftMargin _
                   - wdDoc.PageSetup.RightMargin
 
-    ' Insert table at end of email
-    Set insertRange = wdDoc.Range
-    insertRange.Collapse 0
+    chartWidth = (usableWidth / 2) - gap
 
-    Set wdTable = wdDoc.Tables.Add(insertRange, 1, 2)
-    wdTable.Borders.Enable = False
-    wdTable.AllowAutoFit = False
-
+    leftPos = wdDoc.PageSetup.LeftMargin
+    topPos = wdDoc.PageSetup.TopMargin
     chartCount = 0
 
-    ' ===== LOOP THROUGH ALL CHARTS =====
     For Each ch In srcWs.ChartObjects
 
         chartCount = chartCount + 1
 
-        rowNum = (chartCount + 1) \ 2
-        colNum = IIf(chartCount Mod 2 = 1, 1, 2)
-
-        ' Ensure enough rows
-        If rowNum > wdTable.Rows.Count Then
-            wdTable.Rows.Add
-        End If
-
-        ' Copy chart as HIGH-RES picture
+        ' Copy as HIGH-RES picture
         ch.Chart.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
 
-        ' Paste into Outlook table cell
-        wdTable.Cell(rowNum, colNum).Range.Paste
+        ' Paste
+        wdDoc.Range(wdDoc.Content.End - 1).Paste
+        Set shp = wdDoc.Shapes(wdDoc.Shapes.Count)
 
-        ' Resize pasted image to HALF email width
-        Set shp = wdTable.Cell(rowNum, colNum).Range.InlineShapes(1)
         With shp
+            .WrapFormat.Type = 3   ' wdWrapSquare (FLOATING)
             .LockAspectRatio = True
-            .Width = (usableWidth / 2) - 20
+            .Width = chartWidth
         End With
 
-        ' Center align
-        wdTable.Cell(rowNum, colNum).Range.ParagraphFormat.Alignment = 1
+        ' ---- FIRST CHART IN ROW ----
+        If chartCount Mod 2 = 1 Then
+
+            shp.Left = leftPos
+            shp.Top = topPos
+
+            Set firstShapeInRow = shp
+            maxRowHeight = shp.Height
+
+        ' ---- SECOND CHART IN ROW ----
+        Else
+
+            shp.Left = leftPos + chartWidth + gap
+            shp.Top = topPos
+
+            ' Find max height of the row
+            If shp.Height > maxRowHeight Then
+                maxRowHeight = shp.Height
+            End If
+
+            ' FORCE BOTH CHARTS TO SAME HEIGHT
+            firstShapeInRow.Height = maxRowHeight
+            shp.Height = maxRowHeight
+
+            ' Move to next row
+            topPos = topPos + maxRowHeight + gap
+
+        End If
 
     Next ch
 
-    MsgBox "All charts pasted BIG and readable in Outlook.", vbInformation
+    MsgBox "Charts pasted BIG and perfectly aligned.", vbInformation
 
 End Sub
 
