@@ -1,3 +1,97 @@
+*****************
+Sub Append_Filtered_CSV_To_Existing_Sheet()
+
+    Dim csvWB As Workbook
+    Dim csvWS As Worksheet
+    Dim targetWS As Worksheet
+    Dim lastCSVRow As Long
+    Dim lastTargetRow As Long
+    Dim csvLastCol As Long
+    Dim targetLastCol As Long
+    Dim dateCol As Long, classCol As Long, tsCol As Long
+    Dim i As Long
+
+    ' ===== CONFIG =====
+    Dim csvPath As String
+    csvPath = "C:\Users\vijayakiran\Downloads\cfw.xlsx"   ' CHANGE THIS
+
+    Set targetWS = ThisWorkbook.Worksheets("Sheet3") ' CHANGE IF NEEDED
+    ' ==================
+
+    Application.ScreenUpdating = False
+    Application.DisplayAlerts = False
+
+    ' Open CSV
+    Set csvWB = Workbooks.Open(csvPath)
+    Set csvWS = csvWB.Sheets(1)
+
+    ' Identify columns by header
+    dateCol = Application.Match("Date", csvWS.Rows(1), 0)
+    classCol = Application.Match("Region", csvWS.Rows(1), 0)
+    tsCol = Application.Match("Date", csvWS.Rows(1), 0)
+
+    lastCSVRow = csvWS.Cells(csvWS.Rows.Count, dateCol).End(xlUp).Row
+
+    ' Filter rows (bottom-up delete)
+    For i = lastCSVRow To 2 Step -1
+
+        If Trim(csvWS.Cells(i, tsCol).Value) = "" _
+        Or (csvWS.Cells(i, classCol).Value <> "East" _
+        And csvWS.Cells(i, classCol).Value <> "West") _
+        Or Weekday(csvWS.Cells(i, dateCol).Value, vbMonday) > 5 Then
+
+            csvWS.Rows(i).Delete
+
+        End If
+
+    Next i
+
+    ' Recalculate last CSV row
+    lastCSVRow = csvWS.Cells(csvWS.Rows.Count, dateCol).End(xlUp).Row
+
+    ' Sort CSV by date ascending
+    With csvWS.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=csvWS.Range(csvWS.Cells(2, dateCol), csvWS.Cells(lastCSVRow, dateCol)), _
+                        Order:=xlAscending
+        .SetRange csvWS.Range("A1").CurrentRegion
+        .Header = xlYes
+        .Apply
+    End With
+
+    ' Determine column counts
+    csvLastCol = csvWS.Cells(1, csvWS.Columns.Count).End(xlToLeft).Column
+    targetLastCol = targetWS.Cells(1, targetWS.Columns.Count).End(xlToLeft).Column
+
+    ' Safety check
+    If csvLastCol > targetLastCol Then
+        MsgBox "CSV has more columns than target sheet. Aborting.", vbCritical
+        csvWB.Close False
+        GoTo Cleanup
+    End If
+
+    ' Find next empty row in target sheet
+    lastTargetRow = targetWS.Cells(targetWS.Rows.Count, 1).End(xlUp).Row + 1
+
+    ' Copy ONLY available CSV columns (exclude header)
+    csvWS.Range(csvWS.Cells(2, 1), csvWS.Cells(lastCSVRow, csvLastCol)).Copy _
+        targetWS.Cells(lastTargetRow, 1)
+
+    ' Close CSV without saving
+    csvWB.Close False
+
+Cleanup:
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+
+    MsgBox "Filtered CSV data appended successfully.", vbInformation
+
+End Sub
+
+
+*************
+
+
 Sub Insert_Working_Dates_Till_Today()
 
     Dim ws As Worksheet
@@ -228,3 +322,6 @@ Sub Paste_All_Charts_To_Outlook()
     MsgBox "All charts pasted correctly into Outlook body.", vbInformation
 
 End Sub
+
+
+
