@@ -1,3 +1,46 @@
+Sub Paste_Excel_Range_To_Outlook_As_Is()
+
+    Dim srcWS As Worksheet
+    Dim rng As Range
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim wdDoc As Object
+
+    ' ===== CONFIG =====
+    Set srcWS = ActiveSheet
+    Set rng = srcWS.Range("A1:W800")   ' CHANGE IF NEEDED
+    ' ==================
+
+    ' Copy range as picture (EXACT LOOK)
+    rng.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
+
+    ' Start Outlook
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0)
+    olMail.BodyFormat = 2   ' HTML
+    olMail.Display
+
+    ' Paste into email body
+    Set wdDoc = olMail.GetInspector.WordEditor
+    wdDoc.Range(0, 0).Paste
+
+    MsgBox "Excel content pasted EXACTLY as shown.", vbInformation
+
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 *****************
 Sub Append_Filtered_CSV_To_Existing_Sheet()
 
