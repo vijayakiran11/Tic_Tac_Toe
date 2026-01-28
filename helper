@@ -1,34 +1,59 @@
-Sub Paste_Excel_Range_To_Outlook_As_Is()
+Sub Paste_Excel_Range_To_Outlook_Vector_EMF()
 
-    Dim srcWS As Worksheet
+    Dim ws As Worksheet
     Dim rng As Range
+    Dim ch As ChartObject
+    Dim tempFile As String
+
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
 
     ' ===== CONFIG =====
-    Set srcWS = ActiveSheet
-    Set rng = srcWS.Range("A1:W800")   ' CHANGE IF NEEDED
+    Set ws = ActiveSheet
+    Set rng = ws.Range("A1:W800")   ' FULL RANGE
     ' ==================
 
-    ' Copy range as picture (EXACT LOOK)
+    Application.ScreenUpdating = False
+
+    ' Create temp chart (acts as container)
+    Set ch = ws.ChartObjects.Add( _
+                Left:=rng.Left, _
+                Top:=rng.Top, _
+                Width:=rng.Width, _
+                Height:=rng.Height)
+
+    ' Copy range as picture (HIGH QUALITY)
     rng.CopyPicture Appearance:=xlPrinter, Format:=xlPicture
 
-    ' Start Outlook
+    ' Paste into chart
+    ch.Chart.Paste
+    ch.Chart.ChartArea.Format.Fill.Visible = msoFalse
+    ch.Chart.ChartArea.Format.Line.Visible = msoFalse
+
+    ' Export as VECTOR EMF (CRYSTAL CLEAR)
+    tempFile = Environ("TEMP") & "\ExcelRange.emf"
+    ch.Chart.Export Filename:=tempFile, FilterName:="EMF"
+
+    ' Clean up chart
+    ch.Delete
+
+    ' Open Outlook
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
     olMail.BodyFormat = 2   ' HTML
     olMail.Display
 
-    ' Paste into email body
     Set wdDoc = olMail.GetInspector.WordEditor
-    wdDoc.Range(0, 0).Paste
 
-    MsgBox "Excel content pasted EXACTLY as shown.", vbInformation
+    ' Insert EMF into email body
+    wdDoc.InlineShapes.AddPicture tempFile
+
+    Application.ScreenUpdating = True
+
+    MsgBox "Excel content pasted with PERFECT clarity (vector).", vbInformation
 
 End Sub
-
-
 
 
 
