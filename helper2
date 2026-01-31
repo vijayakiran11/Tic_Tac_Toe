@@ -1,4 +1,4 @@
-Sub RunSQL_And_Paste_ByHeader()
+Sub RunSQL_And_Paste_ByHeader_FAST()
 
     ' ===== ONLY CHANGE THESE =====
     Const SERVER_NAME As String = "YOUR_SERVER_NAME"
@@ -15,19 +15,21 @@ Sub RunSQL_And_Paste_ByHeader()
     "
     ' =============================
 
-    Dim cn As Object
-    Dim rs As Object
+    Dim cn As Object, rs As Object
     Dim ws As Worksheet
     Dim headerMap As Object
     Dim col As Long, i As Long
     Dim lastRow As Long
+    Dim dataArr As Variant
+    Dim fieldCount As Long, rowCount As Long
 
     Application.ScreenUpdating = False
     Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
 
     Set ws = ActiveSheet
 
-    ' BUILD HEADER MAP
+    ' Build header map
     Set headerMap = CreateObject("Scripting.Dictionary")
     col = 1
     Do While ws.Cells(1, col).Value <> ""
@@ -35,34 +37,41 @@ Sub RunSQL_And_Paste_ByHeader()
         col = col + 1
     Loop
 
+    ' Open connection
     Set cn = CreateObject("ADODB.Connection")
-    Set rs = CreateObject("ADODB.Recordset")
-
     cn.Open "Provider=SQLOLEDB;" & _
             "Data Source=" & SERVER_NAME & ";" & _
             "Initial Catalog=" & DATABASE_NAME & ";" & _
             "Integrated Security=SSPI;"
 
+    Set rs = CreateObject("ADODB.Recordset")
+    rs.CursorLocation = 3 ' adUseClient
     rs.Open SQL_QUERY, cn
 
+    ' Pull ALL data at once
+    dataArr = rs.GetRows
+    rowCount = UBound(dataArr, 2) + 1
+    fieldCount = rs.Fields.Count
+
+    ' Find next empty row
     lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
 
-    Do While Not rs.EOF
-        For i = 0 To rs.Fields.Count - 1
-            If headerMap.Exists(LCase(rs.Fields(i).Name)) Then
-                ws.Cells(lastRow, headerMap(LCase(rs.Fields(i).Name))).Value = rs.Fields(i).Value
-            End If
-        Next i
-        lastRow = lastRow + 1
-        rs.MoveNext
-    Loop
+    ' Dump data to sheet FAST
+    For i = 0 To fieldCount - 1
+        If headerMap.Exists(LCase(rs.Fields(i).Name)) Then
+            ws.Cells(lastRow, headerMap(LCase(rs.Fields(i).Name))). _
+                Resize(rowCount, 1).Value = _
+                Application.Transpose(Application.Index(dataArr, i + 1, 0))
+        End If
+    Next i
 
     rs.Close
     cn.Close
 
-    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
     Application.EnableEvents = True
+    Application.ScreenUpdating = True
 
-    MsgBox "SQL data retrieved and pasted successfully", vbInformation
+    MsgBox rowCount & " rows loaded (FAST).", vbInformation
 
 End Sub
