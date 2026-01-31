@@ -1,42 +1,11 @@
 Sub RunSQL_And_Paste_ByHeader()
 
-    Dim cn As Object
-    Dim rs As Object
-    Dim ws As Worksheet
-    Dim sql As String
-    Dim headerMap As Object
-    Dim col As Long, i As Long
-    Dim lastRow As Long
+    ' ===== ONLY CHANGE THESE =====
+    Const SERVER_NAME As String = "YOUR_SERVER_NAME"
+    Const DATABASE_NAME As String = "YOUR_DATABASE_NAME"
 
-    Application.ScreenUpdating = False
-    Application.EnableEvents = False
-
-    ' TARGET SHEET (change if needed)
-    Set ws = ActiveSheet
-    ' Or:
-    ' Set ws = ThisWorkbook.Sheets("Output")
-
-    ' BUILD HEADER MAP
-    Set headerMap = CreateObject("Scripting.Dictionary")
-    col = 1
-
-    Do While ws.Cells(1, col).Value <> ""
-        headerMap(LCase(ws.Cells(1, col).Value)) = col
-        col = col + 1
-    Loop
-
-    ' ADO OBJECTS
-    Set cn = CreateObject("ADODB.Connection")
-    Set rs = CreateObject("ADODB.Recordset")
-
-    ' CONNECTION STRING (EDIT)
-    cn.Open "Provider=SQLOLEDB;" & _
-            "Data Source=SERVER_NAME;" & _
-            "Initial Catalog=DATABASE_NAME;" & _
-            "Integrated Security=SSPI;"
-
-    ' SQL QUERY (PASTE YOUR QUERY HERE)
-    sql = "
+    Dim SQL_QUERY As String
+    SQL_QUERY = "
         SELECT
             TradeDate,
             ISIN,
@@ -44,22 +13,46 @@ Sub RunSQL_And_Paste_ByHeader()
             Price
         FROM dbo.Trades
     "
+    ' =============================
 
-    ' EXECUTE
-    rs.Open sql, cn
+    Dim cn As Object
+    Dim rs As Object
+    Dim ws As Worksheet
+    Dim headerMap As Object
+    Dim col As Long, i As Long
+    Dim lastRow As Long
 
-    ' FIND NEXT EMPTY ROW
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+
+    Set ws = ActiveSheet
+
+    ' BUILD HEADER MAP
+    Set headerMap = CreateObject("Scripting.Dictionary")
+    col = 1
+    Do While ws.Cells(1, col).Value <> ""
+        headerMap(LCase(Trim(ws.Cells(1, col).Value))) = col
+        col = col + 1
+    Loop
+
+    Set cn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    cn.Open "Provider=SQLOLEDB;" & _
+            "Data Source=" & SERVER_NAME & ";" & _
+            "Initial Catalog=" & DATABASE_NAME & ";" & _
+            "Integrated Security=SSPI;"
+
+    rs.Open SQL_QUERY, cn
+
     lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
 
-    ' WRITE DATA BY MATCHING HEADERS
     Do While Not rs.EOF
-
         For i = 0 To rs.Fields.Count - 1
             If headerMap.Exists(LCase(rs.Fields(i).Name)) Then
                 ws.Cells(lastRow, headerMap(LCase(rs.Fields(i).Name))).Value = rs.Fields(i).Value
             End If
         Next i
-
         lastRow = lastRow + 1
         rs.MoveNext
     Loop
