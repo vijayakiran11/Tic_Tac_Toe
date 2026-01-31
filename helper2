@@ -75,3 +75,60 @@ Sub RunSQL_And_Paste_ByHeader_FAST()
     MsgBox rowCount & " rows loaded (FAST).", vbInformation
 
 End Sub
+************************************************************************************************
+
+Sub RunSQL_And_Paste_FAST_NoHeaderMatch()
+
+    ' ===== ONLY CHANGE THESE =====
+    Const SERVER_NAME As String = "YOUR_SERVER_NAME"
+    Const DATABASE_NAME As String = "YOUR_DATABASE_NAME"
+
+    Dim SQL_QUERY As String
+    SQL_QUERY = "EXEC dbo.getsensis @toplevelnodecode = 'x', @valuation = 'date'"
+    ' =============================
+
+    Dim cn As Object
+    Dim rs As Object
+    Dim ws As Worksheet
+    Dim startRow As Long
+
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+
+    Set ws = ActiveSheet
+
+    ' Find next empty row
+    startRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row + 1
+
+    ' Open SQL connection
+    Set cn = CreateObject("ADODB.Connection")
+    cn.CommandTimeout = 0   ' IMPORTANT for long-running procedures
+    cn.Open "Provider=SQLOLEDB;" & _
+            "Data Source=" & SERVER_NAME & ";" & _
+            "Initial Catalog=" & DATABASE_NAME & ";" & _
+            "Integrated Security=SSPI;"
+
+    ' Execute query
+    Set rs = CreateObject("ADODB.Recordset")
+    rs.Open SQL_QUERY, cn, 0, 1   ' Forward-only, read-only (FASTEST)
+
+    ' Paste EVERYTHING in one shot
+    ws.Cells(startRow, 1).CopyFromRecordset rs
+
+    rs.Close
+    cn.Close
+
+    Application.Calculation = xlCalculationAutomatic
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+
+    MsgBox "Data loaded successfully (FAST).", vbInformation
+
+End Sub
+
+
+
+********************************************************************************
+
+
