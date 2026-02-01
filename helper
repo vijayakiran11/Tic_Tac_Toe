@@ -80,9 +80,15 @@ Sub Append_Filtered_CSV_To_Existing_Sheet()
     Dim i As Long
 
     ' ===== CONFIG =====
-    Dim csvPath As String
-    csvPath = "C:\Users\vijayakiran\Downloads\cfw.xlsx"   ' CHANGE THIS
+    downloadsPath = "C:\Users\vijayakiran\Downloads\"
+    fileName = Dir(downloadsPath & "CFW*.*")
 
+    If fileName = "" Then
+        MsgBox "No file starting with 'CFW' found in Downloads.", vbCritical
+        Exit Sub
+    End If
+
+    csvPath = downloadsPath & fileName
     Set targetWS = ThisWorkbook.Worksheets("Sheet3") ' CHANGE IF NEEDED
     ' ==================
 
