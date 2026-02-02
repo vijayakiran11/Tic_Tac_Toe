@@ -1,11 +1,10 @@
-Sub SendExcelRangesAsImagesWithHeadings_FIXED()
+Sub SendExcelRangesAsImagesWithHeadings_SELECTION()
 
     Dim wb As Workbook
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
-    Dim wdRange As Object
-    Dim headingRange As Object
+    Dim wdSel As Object
 
     '========== OPEN WORKBOOK ==========
     Set wb = Workbooks.Open("C:\Path\To\YourWorkbook.xlsx")
@@ -22,74 +21,68 @@ Sub SendExcelRangesAsImagesWithHeadings_FIXED()
 
     '========== WORD EDITOR ==========
     Set wdDoc = olMail.GetInspector.WordEditor
-    Set wdRange = wdDoc.Content
-    wdRange.Collapse 0   ' move to end
+    Set wdSel = wdDoc.Application.Selection
+
+    wdSel.EndKey 6   ' 6 = wdStory (move to end)
 
     '========== SHEET 1 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet1 – Summary")
+    Call InsertHeadingSel(wdSel, "Sheet1 – Summary")
     wb.Sheets("Sheet1").Range("A1:D10").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     '========== SHEET 2 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet2 – Details")
+    Call InsertHeadingSel(wdSel, "Sheet2 – Details")
     wb.Sheets("Sheet2").Range("A1:C8").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     '========== SHEET 3 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet3 – Metrics")
+    Call InsertHeadingSel(wdSel, "Sheet3 – Metrics")
     wb.Sheets("Sheet3").Range("B2:E12").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     '========== SHEET 4 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet4 – Analysis")
+    Call InsertHeadingSel(wdSel, "Sheet4 – Analysis")
     wb.Sheets("Sheet4").Range("A1:F6").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     '========== SHEET 5 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet5 – Overview")
+    Call InsertHeadingSel(wdSel, "Sheet5 – Overview")
     wb.Sheets("Sheet5").Range("A1:D5").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     '========== SHEET 6 ==========
-    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet6 – Final")
+    Call InsertHeadingSel(wdSel, "Sheet6 – Final")
     wb.Sheets("Sheet6").Range("C1:G9").CopyPicture xlScreen, xlPicture
-    wdRange.Paste
-    Call AddSpacingSafe(wdRange)
+    wdSel.Paste
+    Call AddSpacingSel(wdSel)
 
     wb.Close False
 
 End Sub
 
 
-'========== SAFE HEADING INSERT ==========
-Sub InsertHeadingSafe(wdDoc As Object, wdRange As Object, txt As String)
+'========== HEADING (SELECTION SAFE) ==========
+Sub InsertHeadingSel(wdSel As Object, txt As String)
 
-    Dim hRange As Object
-
-    wdRange.InsertAfter txt & vbCrLf
-    Set hRange = wdDoc.Range(wdRange.Start, wdRange.Start + Len(txt))
-
-    With hRange.Font
-        .Bold = True
-        .Size = 12
-    End With
-
-    wdRange.Collapse 0
+    wdSel.TypeText txt
+    wdSel.Font.Bold = True
+    wdSel.Font.Size = 12
+    wdSel.TypeParagraph
+    wdSel.Font.Bold = False
 
 End Sub
 
 
-'========== SAFE SPACING ==========
-Sub AddSpacingSafe(wdRange As Object)
+'========== SPACING ==========
+Sub AddSpacingSel(wdSel As Object)
 
-    wdRange.InsertParagraphAfter
-    wdRange.InsertParagraphAfter
-    wdRange.Collapse 0
+    wdSel.TypeParagraph
+    wdSel.TypeParagraph
 
 End Sub
 
