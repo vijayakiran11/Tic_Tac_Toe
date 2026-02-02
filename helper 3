@@ -1,0 +1,100 @@
+Sub SendRangesFromMultipleSheets_ToOutlook()
+
+    Dim wb As Workbook
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim htmlBody As String
+
+    '================ OPEN WORKBOOK =================
+    Set wb = Workbooks.Open("C:\Path\To\YourWorkbook.xlsx")
+
+    '================ START OUTLOOK =================
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0)
+
+    htmlBody = "<html><body>"
+
+    '================ SHEET 1 =================
+    htmlBody = htmlBody & "<b>Sheet1 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet1").Range("A1:D10"))
+    htmlBody = htmlBody & "<br><br>"
+
+    '================ SHEET 2 =================
+    htmlBody = htmlBody & "<b>Sheet2 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet2").Range("A1:C8"))
+    htmlBody = htmlBody & "<br><br>"
+
+    '================ SHEET 3 =================
+    htmlBody = htmlBody & "<b>Sheet3 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet3").Range("B2:E12"))
+    htmlBody = htmlBody & "<br><br>"
+
+    '================ SHEET 4 =================
+    htmlBody = htmlBody & "<b>Sheet4 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet4").Range("A1:F6"))
+    htmlBody = htmlBody & "<br><br>"
+
+    '================ SHEET 5 =================
+    htmlBody = htmlBody & "<b>Sheet5 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet5").Range("A1:D5"))
+    htmlBody = htmlBody & "<br><br>"
+
+    '================ SHEET 6 =================
+    htmlBody = htmlBody & "<b>Sheet6 Data</b><br>"
+    htmlBody = htmlBody & RangeToHTML(wb.Sheets("Sheet6").Range("C1:G9"))
+    htmlBody = htmlBody & "<br><br>"
+
+    htmlBody = htmlBody & "</body></html>"
+
+    '================ EMAIL DETAILS =================
+    With olMail
+        .To = "someone@example.com"
+        .Subject = "Automated Excel Report"
+        .HTMLBody = htmlBody
+        .Display   ' change to .Send if required
+    End With
+
+    wb.Close False
+
+End Sub
+
+
+'================ HELPER FUNCTION =================
+Function RangeToHTML(rng As Range) As String
+
+    Dim fso As Object
+    Dim ts As Object
+    Dim TempFile As String
+    Dim TempWB As Workbook
+
+    TempFile = Environ$("temp") & "\" & Format(Now, "dd-mm-yy h-mm-ss") & ".htm"
+
+    rng.Copy
+    Set TempWB = Workbooks.Add(1)
+
+    With TempWB.Sheets(1)
+        .Cells(1).PasteSpecial Paste:=8
+        .Cells(1).PasteSpecial xlPasteValues
+        .Cells(1).PasteSpecial xlPasteFormats
+    End With
+
+    Application.CutCopyMode = False
+
+    With TempWB.PublishObjects.Add( _
+        SourceType:=xlSourceRange, _
+        Filename:=TempFile, _
+        Sheet:=TempWB.Sheets(1).Name, _
+        Source:=TempWB.Sheets(1).UsedRange.Address, _
+        HtmlType:=xlHtmlStatic)
+        .Publish True
+    End With
+
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.GetFile(TempFile).OpenAsTextStream(1, -2)
+    RangeToHTML = ts.ReadAll
+    ts.Close
+
+    TempWB.Close False
+    Kill TempFile
+
+End Function
