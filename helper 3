@@ -1,3 +1,71 @@
+Sub SendExcelRangesAsImagesInOutlook()
+
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim WordEditor As Object
+
+    '================ OPEN WORKBOOK =================
+    Set wb = Workbooks.Open("C:\Path\To\YourWorkbook.xlsx")
+
+    '================ START OUTLOOK =================
+    Set olApp = CreateObject("Outlook.Application")
+    Set olMail = olApp.CreateItem(0)
+
+    With olMail
+        .To = "someone@example.com"
+        .Subject = "Excel Report"
+        .Display
+    End With
+
+    Set WordEditor = olMail.GetInspector.WordEditor
+
+    '================ SHEET 1 =================
+    wb.Sheets("Sheet1").Range("A1:D10").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    '================ SHEET 2 =================
+    wb.Sheets("Sheet2").Range("A1:C8").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    '================ SHEET 3 =================
+    wb.Sheets("Sheet3").Range("B2:E12").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    '================ SHEET 4 =================
+    wb.Sheets("Sheet4").Range("A1:F6").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    '================ SHEET 5 =================
+    wb.Sheets("Sheet5").Range("A1:D5").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    '================ SHEET 6 =================
+    wb.Sheets("Sheet6").Range("C1:G9").CopyPicture _
+        Appearance:=xlScreen, Format:=xlPicture
+    WordEditor.Range.Paste
+    WordEditor.Range.InsertParagraphAfter
+
+    wb.Close False
+
+End Sub
+
+
+******************************************************************************************
+
+
+
 Sub SendRangesFromMultipleSheets_ToOutlook()
 
     Dim wb As Workbook
