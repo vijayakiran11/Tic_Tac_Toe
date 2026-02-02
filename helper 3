@@ -1,15 +1,16 @@
-Sub SendExcelRangesAsImagesWithHeadings()
+Sub SendExcelRangesAsImagesWithHeadings_FIXED()
 
     Dim wb As Workbook
     Dim olApp As Object
     Dim olMail As Object
     Dim wdDoc As Object
     Dim wdRange As Object
+    Dim headingRange As Object
 
-    '================ OPEN WORKBOOK =================
+    '========== OPEN WORKBOOK ==========
     Set wb = Workbooks.Open("C:\Path\To\YourWorkbook.xlsx")
 
-    '================ START OUTLOOK =================
+    '========== START OUTLOOK ==========
     Set olApp = CreateObject("Outlook.Application")
     Set olMail = olApp.CreateItem(0)
 
@@ -19,74 +20,79 @@ Sub SendExcelRangesAsImagesWithHeadings()
         .Display
     End With
 
-    '================ WORD EDITOR =================
+    '========== WORD EDITOR ==========
     Set wdDoc = olMail.GetInspector.WordEditor
     Set wdRange = wdDoc.Content
-    wdRange.Collapse 0   'Move cursor to end
+    wdRange.Collapse 0   ' move to end
 
-    '================ SHEET 1 =================
-    Call InsertHeading(wdRange, "Sheet1 – Summary")
+    '========== SHEET 1 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet1 – Summary")
     wb.Sheets("Sheet1").Range("A1:D10").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
-    '================ SHEET 2 =================
-    Call InsertHeading(wdRange, "Sheet2 – Details")
+    '========== SHEET 2 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet2 – Details")
     wb.Sheets("Sheet2").Range("A1:C8").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
-    '================ SHEET 3 =================
-    Call InsertHeading(wdRange, "Sheet3 – Metrics")
+    '========== SHEET 3 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet3 – Metrics")
     wb.Sheets("Sheet3").Range("B2:E12").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
-    '================ SHEET 4 =================
-    Call InsertHeading(wdRange, "Sheet4 – Analysis")
+    '========== SHEET 4 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet4 – Analysis")
     wb.Sheets("Sheet4").Range("A1:F6").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
-    '================ SHEET 5 =================
-    Call InsertHeading(wdRange, "Sheet5 – Overview")
+    '========== SHEET 5 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet5 – Overview")
     wb.Sheets("Sheet5").Range("A1:D5").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
-    '================ SHEET 6 =================
-    Call InsertHeading(wdRange, "Sheet6 – Final")
+    '========== SHEET 6 ==========
+    Call InsertHeadingSafe(wdDoc, wdRange, "Sheet6 – Final")
     wb.Sheets("Sheet6").Range("C1:G9").CopyPicture xlScreen, xlPicture
     wdRange.Paste
-    Call AddSpacing(wdRange)
+    Call AddSpacingSafe(wdRange)
 
     wb.Close False
 
 End Sub
 
 
-'================ HEADING FORMAT =================
-Sub InsertHeading(wdRange As Object, headingText As String)
+'========== SAFE HEADING INSERT ==========
+Sub InsertHeadingSafe(wdDoc As Object, wdRange As Object, txt As String)
 
-    With wdRange
-        .InsertAfter headingText
-        .Font.Bold = True
-        .Font.Size = 12
-        .InsertParagraphAfter
-        .Collapse 0
+    Dim hRange As Object
+
+    wdRange.InsertAfter txt & vbCrLf
+    Set hRange = wdDoc.Range(wdRange.Start, wdRange.Start + Len(txt))
+
+    With hRange.Font
+        .Bold = True
+        .Size = 12
     End With
+
+    wdRange.Collapse 0
 
 End Sub
 
 
-'================ SPACING AFTER IMAGE =================
-Sub AddSpacing(wdRange As Object)
+'========== SAFE SPACING ==========
+Sub AddSpacingSafe(wdRange As Object)
 
     wdRange.InsertParagraphAfter
     wdRange.InsertParagraphAfter
     wdRange.Collapse 0
 
 End Sub
+
 
 ******************************************************************************************
 
