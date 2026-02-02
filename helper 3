@@ -1,10 +1,10 @@
-Sub SendExcelRangesAsImagesInOutlook()
+Sub SendExcelRangesAsImagesWithHeadings()
 
     Dim wb As Workbook
-    Dim ws As Worksheet
     Dim olApp As Object
     Dim olMail As Object
-    Dim WordEditor As Object
+    Dim wdDoc As Object
+    Dim wdRange As Object
 
     '================ OPEN WORKBOOK =================
     Set wb = Workbooks.Open("C:\Path\To\YourWorkbook.xlsx")
@@ -19,48 +19,74 @@ Sub SendExcelRangesAsImagesInOutlook()
         .Display
     End With
 
-    Set WordEditor = olMail.GetInspector.WordEditor
+    '================ WORD EDITOR =================
+    Set wdDoc = olMail.GetInspector.WordEditor
+    Set wdRange = wdDoc.Content
+    wdRange.Collapse 0   'Move cursor to end
 
     '================ SHEET 1 =================
-    wb.Sheets("Sheet1").Range("A1:D10").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet1 – Summary")
+    wb.Sheets("Sheet1").Range("A1:D10").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     '================ SHEET 2 =================
-    wb.Sheets("Sheet2").Range("A1:C8").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet2 – Details")
+    wb.Sheets("Sheet2").Range("A1:C8").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     '================ SHEET 3 =================
-    wb.Sheets("Sheet3").Range("B2:E12").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet3 – Metrics")
+    wb.Sheets("Sheet3").Range("B2:E12").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     '================ SHEET 4 =================
-    wb.Sheets("Sheet4").Range("A1:F6").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet4 – Analysis")
+    wb.Sheets("Sheet4").Range("A1:F6").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     '================ SHEET 5 =================
-    wb.Sheets("Sheet5").Range("A1:D5").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet5 – Overview")
+    wb.Sheets("Sheet5").Range("A1:D5").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     '================ SHEET 6 =================
-    wb.Sheets("Sheet6").Range("C1:G9").CopyPicture _
-        Appearance:=xlScreen, Format:=xlPicture
-    WordEditor.Range.Paste
-    WordEditor.Range.InsertParagraphAfter
+    Call InsertHeading(wdRange, "Sheet6 – Final")
+    wb.Sheets("Sheet6").Range("C1:G9").CopyPicture xlScreen, xlPicture
+    wdRange.Paste
+    Call AddSpacing(wdRange)
 
     wb.Close False
 
 End Sub
 
+
+'================ HEADING FORMAT =================
+Sub InsertHeading(wdRange As Object, headingText As String)
+
+    With wdRange
+        .InsertAfter headingText
+        .Font.Bold = True
+        .Font.Size = 12
+        .InsertParagraphAfter
+        .Collapse 0
+    End With
+
+End Sub
+
+
+'================ SPACING AFTER IMAGE =================
+Sub AddSpacing(wdRange As Object)
+
+    wdRange.InsertParagraphAfter
+    wdRange.InsertParagraphAfter
+    wdRange.Collapse 0
+
+End Sub
 
 ******************************************************************************************
 
