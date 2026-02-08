@@ -3,8 +3,8 @@ from PIL import Image
 import os
 
 # ================== CONFIG ==================
-EXCEL_FILE = r"C:\Users\vijayakiran\OneDrive\Desktop\DJ.xlsm"
-SHEET_NAME = "Sheet2"      # sheet containing charts
+EXCEL_FILE_NAME = "DJ.xlsm"        # MUST already be open
+SHEET_NAME = "Sheet2"
 TEMP_DIR = r"C:\Temp\charts"
 DASHBOARD_IMG = r"C:\Temp\dashboard.png"
 
@@ -14,24 +14,21 @@ EMAIL_SUBJECT = "Charts Dashboard"
 
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-# ================== STEP 1: EXPORT EXCEL CHARTS ==================
-excel = win32.Dispatch("Excel.Application")
-excel.Visible = False
+# ================== STEP 1: CONNECT TO OPEN EXCEL ==================
+excel = win32.GetActiveObject("Excel.Application")
+excel.Visible = True
 
-wb = excel.Workbooks.Open(EXCEL_FILE)
+wb = excel.Workbooks(EXCEL_FILE_NAME)
 ws = wb.Sheets(SHEET_NAME)
 
 chart_paths = []
 
 for i, chart_obj in enumerate(ws.ChartObjects(), start=1):
-    path = os.path.join(TEMP_DIR, f"chart_{i}.png")
-    chart_obj.Chart.Export(path)
-    chart_paths.append(path)
+    img_path = os.path.join(TEMP_DIR, f"chart_{i}.png")
+    chart_obj.Chart.Export(img_path)
+    chart_paths.append(img_path)
 
-wb.Close(False)
-excel.Quit()
-
-# ================== STEP 2: BUILD DASHBOARD (2 PER ROW) ==================
+# ================== STEP 2: BUILD DASHBOARD (2 CHARTS PER ROW) ==================
 images = [Image.open(p) for p in chart_paths]
 
 chart_width = max(img.width for img in images)
@@ -47,10 +44,7 @@ dashboard = Image.new(
 for idx, img in enumerate(images):
     row = idx // 2
     col = idx % 2
-    dashboard.paste(
-        img,
-        (col * chart_width, row * chart_height)
-    )
+    dashboard.paste(img, (col * chart_width, row * chart_height))
 
 dashboard.save(DASHBOARD_IMG)
 
@@ -72,8 +66,10 @@ mail.HTMLBody = f"""
 
 mail.Display()   # change to .Send when ready
 
-
-
+# ================== CLEANUP (IMPORTANT) ==================
+del ws
+del wb
+del excel
 
 
 *****************************************************************************************************************************
