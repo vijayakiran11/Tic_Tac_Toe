@@ -5,11 +5,14 @@ import os
 # ================== CONFIG ==================
 EXCEL_FILE_NAME = "DJ.xlsm"        # MUST already be open
 SHEET_NAME = "Sheet2"
+
 TEMP_DIR = r"C:\Temp\charts"
 DASHBOARD_IMG = r"C:\Temp\dashboard.png"
 
 EMAIL_TO = "someone@example.com"
 EMAIL_SUBJECT = "Charts Dashboard"
+
+SCALE_FACTOR = 1.3   # 🔥 increase chart size (1.2–1.4 recommended)
 # ============================================
 
 os.makedirs(TEMP_DIR, exist_ok=True)
@@ -28,8 +31,17 @@ for i, chart_obj in enumerate(ws.ChartObjects(), start=1):
     chart_obj.Chart.Export(img_path)
     chart_paths.append(img_path)
 
-# ================== STEP 2: BUILD DASHBOARD (2 CHARTS PER ROW) ==================
-images = [Image.open(p) for p in chart_paths]
+# ================== STEP 2: BUILD DASHBOARD (BIGGER CHARTS, 2 PER ROW) ==================
+images = []
+
+for p in chart_paths:
+    img = Image.open(p)
+    new_size = (
+        int(img.width * SCALE_FACTOR),
+        int(img.height * SCALE_FACTOR)
+    )
+    img = img.resize(new_size, Image.LANCZOS)
+    images.append(img)
 
 chart_width = max(img.width for img in images)
 chart_height = max(img.height for img in images)
@@ -48,28 +60,37 @@ for idx, img in enumerate(images):
 
 dashboard.save(DASHBOARD_IMG)
 
-# ================== STEP 3: SEND VIA OUTLOOK ==================
+# ================== STEP 3: SEND VIA OUTLOOK (INLINE IMAGE – NO SHRINK) ==================
 outlook = win32.Dispatch("Outlook.Application")
 mail = outlook.CreateItem(0)
 
 mail.To = EMAIL_TO
 mail.Subject = EMAIL_SUBJECT
 
+# Attach image INLINE (CID)
+attachment = mail.Attachments.Add(DASHBOARD_IMG)
+cid = "dashboard_img"
+attachment.PropertyAccessor.SetProperty(
+    "http://schemas.microsoft.com/mapi/proptag/0x3712001F",
+    cid
+)
+
 mail.HTMLBody = f"""
 <html>
 <body>
 <h2>Charts Dashboard</h2>
-<img src="{DASHBOARD_IMG}" style="width:100%;">
+<img src="cid:{cid}">
 </body>
 </html>
 """
 
 mail.Display()   # change to .Send when ready
 
-# ================== CLEANUP (IMPORTANT) ==================
+# ================== CLEANUP ==================
 del ws
 del wb
 del excel
+
 
 
 *****************************************************************************************************************************
