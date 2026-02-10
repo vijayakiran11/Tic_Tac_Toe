@@ -1,5 +1,163 @@
 import win32com.client as win32
 import os
+import time
+
+# ================== CONFIG ==================
+EXCEL_FULL_PATH = r"C:\Users\vijayakiran\OneDrive\Desktop\DJ.xlsm"
+SHEET_NAME = "Sheet2"
+
+TEMP_DIR = r"C:\Temp\charts"
+
+EMAIL_TO = "someone@example.com"
+EMAIL_SUBJECT = "Charts Dashboard"
+
+TABLE_CHART_COUNTS = [4, 5, 5, 22]
+# ============================================
+
+# ================== PREP: CLEAN TEMP FOLDER ==================
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+for f in os.listdir(TEMP_DIR):
+    try:
+        os.remove(os.path.join(TEMP_DIR, f))
+    except Exception:
+        pass
+
+# ================== STEP 1: CONNECT TO EXCEL (PATH-BASED) ==================
+excel = win32.Dispatch("Excel.Application")
+excel.Visible = True
+excel.DisplayAlerts = False
+
+wb = None
+for book in excel.Workbooks:
+    if book.FullName.lower() == EXCEL_FULL_PATH.lower():
+        wb = book
+        break
+
+if wb is None:
+    wb = excel.Workbooks.Open(EXCEL_FULL_PATH)
+
+ws = wb.Sheets(SHEET_NAME)
+
+# Make sure Excel is fully ready
+excel.CalculateFull()
+time.sleep(1)
+
+# ================== STEP 2: COLLECT & SORT CHARTS ==================
+charts = []
+for chart_obj in ws.ChartObjects():
+    charts.append({
+        "chart": chart_obj,
+        "top": chart_obj.Top,
+        "left": chart_obj.Left
+    })
+
+charts.sort(key=lambda c: (c["top"], c["left"]))
+
+# ================== STEP 3: EXPORT CHARTS (RELIABLE) ==================
+chart_files = []
+
+for i, c in enumerate(charts, start=1):
+    img_path = os.path.join(TEMP_DIR, f"chart_{i}.png")
+
+    # Retry export up to 3 times
+    success = False
+    for attempt in range(3):
+        try:
+            c["chart"].Activate()
+            excel.ActiveChart.Export(img_path)
+            time.sleep(0.2)
+
+            if os.path.exists(img_path) and os.path.getsize(img_path) > 0:
+                success = True
+                break
+        except Exception:
+            time.sleep(0.3)
+
+    if not success:
+        raise RuntimeError(f"❌ Failed to export chart {i}")
+
+    chart_files.append(img_path)
+
+# ================== STEP 4: CREATE OUTLOOK MAIL & ATTACH IMAGES ==================
+outlook = win32.Dispatch("Outlook.Application")
+mail = outlook.CreateItem(0)
+
+mail.To = EMAIL_TO
+mail.Subject = EMAIL_SUBJECT
+
+cid_map = {}
+for i, img_path in enumerate(chart_files):
+    attachment = mail.Attachments.Add(img_path)
+    cid = f"chart{i}"
+    attachment.PropertyAccessor.SetProperty(
+        "http://schemas.microsoft.com/mapi/proptag/0x3712001F",
+        cid
+    )
+    cid_map[i] = cid
+
+# ================== STEP 5: BUILD HTML TABLES ==================
+html_tables = ""
+idx = 0
+total = len(chart_files)
+
+for section_no, requested in enumerate(TABLE_CHART_COUNTS, start=1):
+    remaining = total - idx
+    if remaining <= 0:
+        break
+
+    take = min(requested, remaining)
+    section_indexes = list(range(idx, idx + take))
+    idx += take
+
+    html_tables += f"<h3>Section {section_no}</h3>"
+    html_tables += '<table border="0" cellspacing="12" cellpadding="0">'
+
+    for r in range(0, len(section_indexes), 2):
+        html_tables += "<tr>"
+
+        cid1 = cid_map[section_indexes[r]]
+        html_tables += f'<td><img src="cid:{cid1}" style="display:block;"></td>'
+
+        if r + 1 < len(section_indexes):
+            cid2 = cid_map[section_indexes[r + 1]]
+            html_tables += f'<td><img src="cid:{cid2}" style="display:block;"></td>'
+        else:
+            html_tables += "<td></td>"
+
+        html_tables += "</tr>"
+
+    html_tables += "</table><br><br>"
+
+mail.HTMLBody = f"""
+<html>
+<body>
+<h2>Charts Dashboard</h2>
+{html_tables}
+</body>
+</html>
+"""
+
+mail.Display()
+
+# ================== CLEANUP ==================
+del ws
+del wb
+del excel
+
+
+
+
+
+
+
+
+*********************************************
+
+
+
+import win32com.client as win32
+import os
 
 # ================== CONFIG ==================
 EXCEL_FULL_PATH = r"C:\Users\vijayakiran\OneDrive\Desktop\DJ.xlsm"
