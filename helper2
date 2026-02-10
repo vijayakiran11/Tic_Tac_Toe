@@ -1,3 +1,21 @@
+wb = None
+for book in excel.Workbooks:
+    if book.Name.lower().startswith("dj.xlsm"):
+        wb = book
+        break
+
+if wb is None:
+    raise RuntimeError("DJ.xlsm is not open in the attached Excel instance")
+
+
+
+
+
+
+******************************************************************************************8
+
+
+
 Sub RunSQL_And_Paste_ByHeader_FAST()
 
     ' ===== ONLY CHANGE THESE =====
