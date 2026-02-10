@@ -40,7 +40,7 @@ for chart_obj in ws.ChartObjects():
         "left": chart_obj.Left
     })
 
-# Sort exactly as seen in Excel
+# Sort exactly as seen in Excel (top → left)
 charts.sort(key=lambda c: (c["top"], c["left"]))
 
 # Export charts
@@ -50,7 +50,7 @@ for i, c in enumerate(charts, start=1):
     c["chart"].Chart.Export(img_path)
     chart_paths.append(img_path)
 
-# ================== STEP 3: BUILD MULTIPLE HTML TABLES ==================
+# ================== STEP 3: BUILD MULTIPLE HTML TABLES (OUTLOOK-SAFE) ==================
 html_tables = ""
 idx = 0
 total_charts = len(chart_paths)
@@ -61,28 +61,35 @@ for section_no, requested_count in enumerate(TABLE_CHART_COUNTS, start=1):
         break
 
     take = min(requested_count, remaining)
-    table_imgs = chart_paths[idx: idx + take]
+    section_imgs = chart_paths[idx: idx + take]
     idx += take
 
     html_tables += f"<h3>Section {section_no}</h3>"
     html_tables += '<table border="0" cellspacing="12" cellpadding="0">'
 
-    for i, img_path in enumerate(table_imgs):
-        if i % 2 == 0:
-            html_tables += "<tr>"
+    # Build rows explicitly (2 charts per row)
+    for r in range(0, len(section_imgs), 2):
+        html_tables += "<tr>"
 
-        img_html_path = img_path.replace("\\", "/")
+        # First cell
+        img1 = section_imgs[r].replace("\\", "/")
         html_tables += f"""
             <td>
-                <img src="file:///{img_html_path}" style="display:block;">
+                <img src="file:///{img1}" style="display:block;">
             </td>
         """
 
-        if i % 2 == 1:
-            html_tables += "</tr>"
+        # Second cell (or empty cell if odd count)
+        if r + 1 < len(section_imgs):
+            img2 = section_imgs[r + 1].replace("\\", "/")
+            html_tables += f"""
+                <td>
+                    <img src="file:///{img2}" style="display:block;">
+                </td>
+            """
+        else:
+            html_tables += "<td></td>"
 
-    # Close last row if odd count
-    if len(table_imgs) % 2 == 1:
         html_tables += "</tr>"
 
     html_tables += "</table><br><br>"
@@ -109,7 +116,6 @@ mail.Display()   # change to .Send when ready
 del ws
 del wb
 del excel
-
 
 
 
