@@ -1,111 +1,92 @@
-import win32com.client as win32
-import os
+Sub SendChartsInGrid()
 
-# ================== CONFIG ==================
-EXCEL_FILE_NAME = "DJ.xlsm"      # Must already be OPEN
-SHEET_NAME = "Sheet2"
+    Dim OutApp As Object
+    Dim OutMail As Object
+    Dim ws As Worksheet
+    Dim chtObj As ChartObject
+    Dim i As Long
+    Dim totalCharts As Long
+    Dim totalRows As Long
+    Dim htmlBody As String
+    Dim chartIndex As Long
+    
+    '==== CHANGE SHEET NAME HERE ====
+    Set ws = ThisWorkbook.Worksheets("Sheet1")
+    
+    totalCharts = ws.ChartObjects.Count
+    
+    If totalCharts = 0 Then
+        MsgBox "No charts found!"
+        Exit Sub
+    End If
+    
+    ' Calculate required rows (2 charts per row)
+    totalRows = (totalCharts + 1) \ 2
+    
+    ' Create Outlook
+    Set OutApp = CreateObject("Outlook.Application")
+    Set OutMail = OutApp.CreateItem(0)
+    
+    ' Start HTML table
+    htmlBody = "<html><body>"
+    htmlBody = htmlBody & "<table style='width:100%; border-collapse:collapse;'>"
+    
+    chartIndex = 1
+    
+    For i = 1 To totalRows
+        htmlBody = htmlBody & "<tr>"
+        
+        ' ===== LEFT COLUMN =====
+        If chartIndex <= totalCharts Then
+            ws.ChartObjects(chartIndex).Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+            
+            htmlBody = htmlBody & "<td style='width:50%; padding:5px;' id='chart" & chartIndex & "'></td>"
+            chartIndex = chartIndex + 1
+        Else
+            htmlBody = htmlBody & "<td style='width:50%;'></td>"
+        End If
+        
+        ' ===== RIGHT COLUMN =====
+        If chartIndex <= totalCharts Then
+            ws.ChartObjects(chartIndex).Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+            
+            htmlBody = htmlBody & "<td style='width:50%; padding:5px;' id='chart" & chartIndex & "'></td>"
+            chartIndex = chartIndex + 1
+        Else
+            htmlBody = htmlBody & "<td style='width:50%;'></td>"
+        End If
+        
+        htmlBody = htmlBody & "</tr>"
+    Next i
+    
+    htmlBody = htmlBody & "</table></body></html>"
+    
+    ' Set basic mail properties
+    With OutMail
+        .Subject = "Charts Report"
+        .HTMLBody = htmlBody
+        .Display
+    End With
+    
+    ' Paste charts after display
+    chartIndex = 1
+    
+    For Each chtObj In ws.ChartObjects
+        chtObj.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+        
+        With OutMail.GetInspector.WordEditor
+            .Application.Selection.Find.ClearFormatting
+            .Application.Selection.Find.Text = "chart" & chartIndex
+            .Application.Selection.Find.Execute
+            
+            If .Application.Selection.Find.Found Then
+                .Application.Selection.Paste
+            End If
+        End With
+        
+        chartIndex = chartIndex + 1
+    Next chtObj
+    
+    MsgBox "Charts inserted in 2-column grid successfully!"
 
-TEMP_DIR = r"C:\Temp\charts"
-
-EMAIL_TO = "someone@example.com"
-EMAIL_SUBJECT = "Charts Dashboard"
-
-TABLE_CHART_COUNTS = [4, 5, 5, 22]
-# ============================================
-
-os.makedirs(TEMP_DIR, exist_ok=True)
-
-# ================== STEP 1: CONNECT TO OPEN EXCEL ==================
-excel = win32.GetActiveObject("Excel.Application")
-wb = excel.Workbooks(EXCEL_FILE_NAME)
-ws = wb.Sheets(SHEET_NAME)
-
-# ---- Collect charts with visual position ----
-charts = []
-for chart_obj in ws.ChartObjects():
-    charts.append({
-        "chart": chart_obj,
-        "top": chart_obj.Top,
-        "left": chart_obj.Left
-    })
-
-# ---- Sort charts exactly as seen in Excel ----
-charts.sort(key=lambda c: (c["top"], c["left"]))
-
-# ---- Export charts ----
-chart_paths = []
-for i, c in enumerate(charts, start=1):
-    img_path = os.path.join(TEMP_DIR, f"chart_{i}.png")
-    c["chart"].Chart.Export(img_path)
-    chart_paths.append(img_path)
-
-# ================== STEP 2: CREATE OUTLOOK MAIL ==================
-outlook = win32.Dispatch("Outlook.Application")
-mail = outlook.CreateItem(0)
-
-mail.To = EMAIL_TO
-mail.Subject = EMAIL_SUBJECT
-
-# ---- Attach images first (important for stability) ----
-attachments = []
-for img_path in chart_paths:
-    attachment = mail.Attachments.Add(img_path)
-    attachments.append(attachment)
-
-mail.Display()   # IMPORTANT: display first before setting CID
-
-# ---- Assign CID to attachments ----
-for i, attachment in enumerate(attachments):
-    cid = f"chart{i+1}"
-    attachment.PropertyAccessor.SetProperty(
-        "http://schemas.microsoft.com/mapi/proptag/0x3712001E",
-        cid
-    )
-
-# ================== STEP 3: BUILD HTML BODY ==================
-html_body = "<html><body><h2>Charts Dashboard</h2>"
-
-img_index = 0
-
-for table_no, chart_count in enumerate(TABLE_CHART_COUNTS, start=1):
-
-    table_imgs = attachments[img_index: img_index + chart_count]
-    img_index += chart_count
-
-    if not table_imgs:
-        break
-
-    html_body += f"<h3>Section {table_no}</h3>"
-    html_body += """
-    <table style="border-collapse:collapse;border:none;
-           mso-table-lspace:0pt;mso-table-rspace:0pt;"
-           cellspacing="12" cellpadding="0">
-    """
-
-    for i, attachment in enumerate(table_imgs):
-
-        if i % 2 == 0:
-            html_body += "<tr>"
-
-        cid = f"chart{img_index - chart_count + i + 1}"
-
-        html_body += f"""
-        <td style="border:none;padding:0;">
-            <img src="cid:{cid}" 
-                 style="display:block;width:600px;">
-        </td>
-        """
-
-        if i % 2 == 1:
-            html_body += "</tr>"
-
-    if len(table_imgs) % 2 == 1:
-        html_body += "</tr>"
-
-    html_body += "</table><br><br>"
-
-html_body += "</body></html>"
-
-mail.HTMLBody = html_body
-
-# Change to mail.Send() when ready
+End Sub
