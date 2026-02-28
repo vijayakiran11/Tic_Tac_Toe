@@ -1,92 +1,80 @@
-Sub SendChartsInGrid()
+Sub SendChartsIn2ColumnGrid()
 
     Dim OutApp As Object
     Dim OutMail As Object
-    Dim ws As Worksheet
-    Dim chtObj As ChartObject
-    Dim i As Long
-    Dim totalCharts As Long
-    Dim totalRows As Long
-    Dim htmlBody As String
-    Dim chartIndex As Long
+    Dim wdDoc As Object
+    Dim wdRange As Object
     
-    '==== CHANGE SHEET NAME HERE ====
+    Dim ws As Worksheet
+    Dim totalCharts As Long
+    Dim i As Long
+    Dim rowIndex As Long
+    Dim colIndex As Long
+    Dim tbl As Object
+    
+    '==== CHANGE SHEET NAME ====
     Set ws = ThisWorkbook.Worksheets("Sheet1")
     
     totalCharts = ws.ChartObjects.Count
     
     If totalCharts = 0 Then
-        MsgBox "No charts found!"
+        MsgBox "No charts found on sheet!"
         Exit Sub
     End If
-    
-    ' Calculate required rows (2 charts per row)
-    totalRows = (totalCharts + 1) \ 2
     
     ' Create Outlook
     Set OutApp = CreateObject("Outlook.Application")
     Set OutMail = OutApp.CreateItem(0)
     
-    ' Start HTML table
-    htmlBody = "<html><body>"
-    htmlBody = htmlBody & "<table style='width:100%; border-collapse:collapse;'>"
-    
-    chartIndex = 1
-    
-    For i = 1 To totalRows
-        htmlBody = htmlBody & "<tr>"
-        
-        ' ===== LEFT COLUMN =====
-        If chartIndex <= totalCharts Then
-            ws.ChartObjects(chartIndex).Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
-            
-            htmlBody = htmlBody & "<td style='width:50%; padding:5px;' id='chart" & chartIndex & "'></td>"
-            chartIndex = chartIndex + 1
-        Else
-            htmlBody = htmlBody & "<td style='width:50%;'></td>"
-        End If
-        
-        ' ===== RIGHT COLUMN =====
-        If chartIndex <= totalCharts Then
-            ws.ChartObjects(chartIndex).Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
-            
-            htmlBody = htmlBody & "<td style='width:50%; padding:5px;' id='chart" & chartIndex & "'></td>"
-            chartIndex = chartIndex + 1
-        Else
-            htmlBody = htmlBody & "<td style='width:50%;'></td>"
-        End If
-        
-        htmlBody = htmlBody & "</tr>"
-    Next i
-    
-    htmlBody = htmlBody & "</table></body></html>"
-    
-    ' Set basic mail properties
     With OutMail
         .Subject = "Charts Report"
-        .HTMLBody = htmlBody
         .Display
     End With
     
-    ' Paste charts after display
-    chartIndex = 1
+    ' Get Word Editor
+    Set wdDoc = OutMail.GetInspector.WordEditor
+    Set wdRange = wdDoc.Range(0, 0)
     
-    For Each chtObj In ws.ChartObjects
-        chtObj.Chart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
-        
-        With OutMail.GetInspector.WordEditor
-            .Application.Selection.Find.ClearFormatting
-            .Application.Selection.Find.Text = "chart" & chartIndex
-            .Application.Selection.Find.Execute
+    ' Calculate rows needed (2 charts per row)
+    Dim totalRows As Long
+    totalRows = (totalCharts + 1) \ 2
+    
+    ' Insert table
+    Set tbl = wdDoc.Tables.Add(wdRange, totalRows, 2)
+    
+    ' Set table width to 100%
+    tbl.PreferredWidthType = 1
+    tbl.PreferredWidth = 100
+    
+    ' Set each column to 50%
+    tbl.Columns(1).PreferredWidthType = 1
+    tbl.Columns(1).PreferredWidth = 50
+    
+    tbl.Columns(2).PreferredWidthType = 1
+    tbl.Columns(2).PreferredWidth = 50
+    
+    ' Loop charts
+    i = 1
+    
+    For rowIndex = 1 To totalRows
+        For colIndex = 1 To 2
             
-            If .Application.Selection.Find.Found Then
-                .Application.Selection.Paste
+            If i <= totalCharts Then
+                
+                ' Copy chart as picture
+                ws.ChartObjects(i).Chart.CopyPicture _
+                    Appearance:=xlScreen, _
+                    Format:=xlPicture
+                
+                ' Paste inside cell
+                tbl.Cell(rowIndex, colIndex).Range.Paste
+                
+                i = i + 1
             End If
-        End With
-        
-        chartIndex = chartIndex + 1
-    Next chtObj
+            
+        Next colIndex
+    Next rowIndex
     
-    MsgBox "Charts inserted in 2-column grid successfully!"
+    MsgBox "Charts inserted successfully in 2-column layout!"
 
 End Sub
