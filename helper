@@ -1,1 +1,95 @@
+Sub Process_Summary()
+
+    Dim wbSrc As Workbook, wbNMB As Workbook
+    Dim ws As Worksheet, wsOut As Worksheet
+    Dim filePath As String
+    Dim lastRow As Long, lastCol As Long
+    Dim colHPA As Long, colBus As Long
+    Dim i As Long, outRow As Long
+
+    Set wbSrc = ThisWorkbook
+    Set wbNMB = Workbooks.Add
+
+    'remove default sheets
+    Application.DisplayAlerts = False
+    Do While wbNMB.Sheets.Count > 1
+        wbNMB.Sheets(1).Delete
+    Loop
+    Application.DisplayAlerts = True
+
+
+'========================
+' PART 1 : BW SHEET
+'========================
+
+    Set ws = wbSrc.Sheets("bw")
+
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    colHPA = Application.Match("HPA", ws.Rows(1), 0)
+
+    Set wsOut = wbNMB.Sheets.Add
+    wsOut.Name = "bw"
+
+    ws.Rows(1).Copy wsOut.Rows(1)
+    outRow = 2
+
+    For i = lastRow To 2 Step -1
+
+        If ws.Cells(i, colHPA).Value <> "a" Then
+
+            ws.Rows(i).Copy wsOut.Rows(outRow)
+            ws.Rows(i).Delete
+            outRow = outRow + 1
+
+        End If
+
+    Next i
+
+
+'========================
+' PART 2 : BKCOMP SHEET
+'========================
+
+    Set ws = wbSrc.Sheets("bkcomp")
+
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    colHPA = Application.Match("HPA", ws.Rows(1), 0)
+    colBus = Application.Match("bus_area", ws.Rows(1), 0)
+
+    Set wsOut = wbNMB.Sheets.Add
+    wsOut.Name = "bkcomp"
+
+    ws.Rows(1).Copy wsOut.Rows(1)
+    outRow = 2
+
+    For i = lastRow To 2 Step -1
+
+        If ws.Cells(i, colBus).Value = "mc" _
+        Or (ws.Cells(i, colHPA).Value <> "m" _
+        And ws.Cells(i, colHPA).Value <> "fif" _
+        And ws.Cells(i, colHPA).Value <> "t" _
+        And ws.Cells(i, colHPA).Value <> "buk") Then
+
+            ws.Rows(i).Copy wsOut.Rows(outRow)
+            ws.Rows(i).Delete
+            outRow = outRow + 1
+
+        End If
+
+    Next i
+
+
+'========================
+'SAVE OUTPUT
+'========================
+
+    wbNMB.SaveAs wbSrc.Path & "\NMB.xlsx"
+
+    MsgBox "Process Completed"
+
+End Sub
 
